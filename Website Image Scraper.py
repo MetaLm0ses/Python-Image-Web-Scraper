@@ -38,7 +38,36 @@ def get_file_extension(url):
     path = unquote(parsed_url.path)
     return os.path.splitext(path)[1]
 
+def determine_url_scheme(url):
+    """Determine whether to use http or https for the URL."""
+    if url.startswith(('http://', 'https://')):
+        return url
+
+    # Try http first
+    http_url = 'http://' + url
+    try:
+        response = requests.get(http_url)
+        if response.status_code == 200:
+            return http_url
+    except requests.exceptions.RequestException:
+        pass
+
+    # Fall back to https if http fails
+    https_url = 'https://' + url
+    try:
+        response = requests.get(https_url)
+        if response.status_code == 200:
+            return https_url
+    except requests.exceptions.RequestException:
+        pass
+
+    # If both fail, return the original URL with http
+    return http_url
+
 def scrape_images(url, save_dir, progress, status_label):
+    # Determine the correct URL scheme
+    url = determine_url_scheme(url)
+
     # Create the directory if it doesn't exist
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -120,9 +149,15 @@ def reset_fields():
     progress_bar['value'] = 0
     status_label.config(text="")
 
+def on_enter_key(event):
+    start_scraping()
+
 # Create the main window
 root = tk.Tk()
 root.title("Website Image Scraper")
+
+# Bind the Enter key to start_scraping function
+root.bind('<Return>', on_enter_key)
 
 # Configure grid weights for scalability
 root.columnconfigure(0, weight=1)
